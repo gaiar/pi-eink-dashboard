@@ -1,0 +1,25 @@
+[Unit]
+Description=Pi E-Ink Dashboard - Waveshare 2.7" e-Paper HAT (B) V1
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+Group=__USER__
+WorkingDirectory=__PROJECT_DIR__/src
+ExecStart=__PROJECT_DIR__/.venv/bin/python -m pi_eink_dashboard.main
+Restart=on-failure
+RestartSec=30
+
+# Graceful shutdown
+KillSignal=SIGTERM
+TimeoutStopSec=15
+
+# Logging to journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pi-eink-dashboard
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,12 @@
+[project]
+name = "pi-eink-dashboard"
+version = "1.0.0"
+description = "Tri-color e-ink utility dashboard for Waveshare 2.7\" e-Paper HAT (B) V1 on Raspberry Pi"
+requires-python = ">=3.11"
+dependencies = [
+    "psutil",
+    "Pillow",
+]
+
+[project.scripts]
+pi-eink-dashboard = "pi_eink_dashboard.main:main"
