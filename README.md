@@ -5,7 +5,7 @@ Tri-color utility dashboard for the **Waveshare 2.7" e-Paper HAT (B) V1** on Ras
 Six information screens rendered in black, white, and red — navigated with the four physical buttons on the HAT. Designed for always-on headless operation with a 3-minute auto-refresh cycle.
 
 <p align="center">
-  <img src="docs/photo_dashboard.jpg" alt="Dashboard running on Pi Zero W" width="400">
+  <img src="docs/photo_dashboard.jpg?raw=true" alt="Dashboard running on Pi Zero W" width="400">
 </p>
 
 ## Screens
@@ -20,13 +20,13 @@ Six information screens rendered in black, white, and red — navigated with the
 | 6 | **Art** | Generative tri-color art — cycles through Voronoi mosaic, concentric geometry, and tile grid algorithms |
 
 <p align="center">
-  <img src="docs/0_dashboard_preview.png" alt="Dashboard" width="264">
-  <img src="docs/1_identity_preview.png" alt="Identity" width="264">
-  <img src="docs/2_network_preview.png" alt="Network" width="264">
+  <img src="docs/0_dashboard_preview.png?raw=true" alt="Dashboard" width="264">
+  <img src="docs/1_identity_preview.png?raw=true" alt="Identity" width="264">
+  <img src="docs/2_network_preview.png?raw=true" alt="Network" width="264">
   <br>
-  <img src="docs/3_health_preview.png" alt="Health" width="264">
-  <img src="docs/4_fullbleed_preview.png" alt="Test Pattern" width="264">
-  <img src="docs/5_fullbleed_preview.png" alt="Art" width="264">
+  <img src="docs/3_health_preview.png?raw=true" alt="Health" width="264">
+  <img src="docs/4_fullbleed_preview.png?raw=true" alt="Test Pattern" width="264">
+  <img src="docs/5_fullbleed_preview.png?raw=true" alt="Art" width="264">
 </p>
 
 ## Hardware
