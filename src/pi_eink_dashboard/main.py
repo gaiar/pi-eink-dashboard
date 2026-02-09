@@ -23,6 +23,12 @@ def main() -> None:
 
     demo_mode = "--demo" in sys.argv
 
+    if demo_mode:
+        # Mock system values for pretty demo screenshots
+        import socket
+
+        socket.gethostname = lambda: "inkberry"
+
     from .composer import Composer
 
     if demo_mode:
