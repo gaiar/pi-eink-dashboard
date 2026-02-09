@@ -5,8 +5,6 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=__USER__
-Group=__USER__
 WorkingDirectory=__PROJECT_DIR__/src
 ExecStart=__PROJECT_DIR__/.venv/bin/python -m pi_eink_dashboard.main
 Restart=on-failure

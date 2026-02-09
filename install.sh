@@ -119,7 +119,7 @@ else
 fi
 
 # Verify critical imports
-if ! "${PROJECT_DIR}/.venv/bin/python" -c "import spidev, gpiozero, psutil, PIL" 2>/dev/null; then
+if ! "${PROJECT_DIR}/.venv/bin/python" -c "import spidev, gpiozero, RPi.GPIO, psutil, PIL" 2>/dev/null; then
     fail "Python import check failed — ensure system packages installed correctly."
 fi
 ok "All Python imports verified."
@@ -130,7 +130,6 @@ info "Step 5/5 — Installing systemd service..."
 
 # Generate service file from template
 sed \
-    -e "s|__USER__|${CURRENT_USER}|g" \
     -e "s|__PROJECT_DIR__|${PROJECT_DIR}|g" \
     "${PROJECT_DIR}/pi-eink-dashboard.service" \
     | sudo tee /etc/systemd/system/${SERVICE_NAME}.service > /dev/null
