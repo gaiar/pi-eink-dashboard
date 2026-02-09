@@ -45,6 +45,7 @@ def main() -> None:
     from .screens.network import NetworkScreen
     from .screens.health import HealthScreen
     from .screens.test_pattern import TestPatternScreen
+    from .screens.art import ArtScreen
 
     inp = InputHandler()
     screens = [
@@ -53,6 +54,7 @@ def main() -> None:
         NetworkScreen(),
         HealthScreen(),
         TestPatternScreen(),
+        ArtScreen(),
     ]
     total = len(screens)
 
