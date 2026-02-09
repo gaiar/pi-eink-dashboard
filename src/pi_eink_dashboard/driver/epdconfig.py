@@ -1,13 +1,13 @@
 """Hardware interface for Waveshare 2.7" e-Paper HAT (B) V1.
 
-Uses gpiozero for GPIO and spidev for SPI.
-Lazy initialization to avoid GPIO conflicts on import.
+Uses RPi.GPIO for GPIO and spidev for SPI — matches the original
+Waveshare epdif.py that is proven to work.
 """
 
-import logging
 import time
 
-logger = logging.getLogger(__name__)
+import RPi.GPIO as GPIO
+import spidev
 
 # Pin definition (BCM numbering)
 RST_PIN = 17
@@ -16,42 +16,15 @@ CS_PIN = 8
 BUSY_PIN = 24
 
 # Lazily initialized
-_rst = None
-_dc = None
-_busy = None
-_spi = None
-
-
-def _ensure_init():
-    global _rst, _dc, _busy, _spi
-    if _spi is not None:
-        return
-
-    import spidev
-    import gpiozero
-
-    _rst = gpiozero.LED(RST_PIN)
-    _dc = gpiozero.LED(DC_PIN)
-    _busy = gpiozero.Button(BUSY_PIN, pull_up=False)
-
-    _spi = spidev.SpiDev(0, 0)
-    _spi.max_speed_hz = 2000000
-    _spi.mode = 0b00
+SPI = None
 
 
 def digital_write(pin, value):
-    _ensure_init()
-    if pin == RST_PIN:
-        _rst.on() if value else _rst.off()
-    elif pin == DC_PIN:
-        _dc.on() if value else _dc.off()
+    GPIO.output(pin, value)
 
 
 def digital_read(pin):
-    _ensure_init()
-    if pin == BUSY_PIN:
-        return _busy.value
-    return 0
+    return GPIO.input(pin)
 
 
 def delay_ms(delaytime):
@@ -59,31 +32,34 @@ def delay_ms(delaytime):
 
 
 def spi_transfer(data):
-    _ensure_init()
-    _spi.writebytes(data)
+    SPI.writebytes(data)
 
 
 def spi_writebyte2(data):
-    _ensure_init()
-    _spi.writebytes2(data)
+    SPI.writebytes2(data)
 
 
 def module_init():
-    _ensure_init()
+    global SPI
+
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setwarnings(False)
+    GPIO.setup(RST_PIN, GPIO.OUT)
+    GPIO.setup(DC_PIN, GPIO.OUT)
+    # CS_PIN (CE0) is managed by spidev — don't claim it via GPIO
+    GPIO.setup(BUSY_PIN, GPIO.IN)
+
+    SPI = spidev.SpiDev(0, 0)
+    SPI.max_speed_hz = 2000000
+    SPI.mode = 0b00
     return 0
 
 
 def module_exit():
-    global _rst, _dc, _busy, _spi
-    logger.debug("spi end")
-    if _spi is not None:
-        _spi.close()
-    if _rst is not None:
-        _rst.off()
-        _rst.close()
-    if _dc is not None:
-        _dc.off()
-        _dc.close()
-    if _busy is not None:
-        _busy.close()
-    _rst = _dc = _busy = _spi = None
+    global SPI
+    if SPI is not None:
+        SPI.close()
+        SPI = None
+    GPIO.output(RST_PIN, 0)
+    GPIO.output(DC_PIN, 0)
+    GPIO.cleanup([RST_PIN, DC_PIN, BUSY_PIN])

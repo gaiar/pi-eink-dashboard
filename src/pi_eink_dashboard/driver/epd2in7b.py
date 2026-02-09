@@ -232,6 +232,7 @@ class EPD:
         """Send black and red image buffers to the display and refresh.
 
         V1 protocol: command 0x10 for black, 0x13 for red.
+        Sends data byte-by-byte matching original Waveshare driver.
         """
         self.send_command(TCON_RESOLUTION)
         self.send_data(EPD_WIDTH >> 8)
@@ -239,15 +240,19 @@ class EPD:
         self.send_data(EPD_HEIGHT >> 8)
         self.send_data(EPD_HEIGHT & 0xFF)
 
-        self.send_command(DATA_START_TRANSMISSION_1)
-        epdconfig.delay_ms(2)
-        self.send_data2(imageblack)
-        epdconfig.delay_ms(2)
+        if imageblack is not None:
+            self.send_command(DATA_START_TRANSMISSION_1)
+            epdconfig.delay_ms(2)
+            for i in range(0, self.width * self.height // 8):
+                self.send_data(imageblack[i])
+            epdconfig.delay_ms(2)
 
-        self.send_command(DATA_START_TRANSMISSION_2)
-        epdconfig.delay_ms(2)
-        self.send_data2(imagered)
-        epdconfig.delay_ms(2)
+        if imagered is not None:
+            self.send_command(DATA_START_TRANSMISSION_2)
+            epdconfig.delay_ms(2)
+            for i in range(0, self.width * self.height // 8):
+                self.send_data(imagered[i])
+            epdconfig.delay_ms(2)
 
         self.send_command(DISPLAY_REFRESH)
         self.wait_until_idle()
@@ -265,12 +270,14 @@ class EPD:
         # V1 polarity: bit=1 means ink, bit=0 means no ink (white)
         self.send_command(DATA_START_TRANSMISSION_1)
         epdconfig.delay_ms(2)
-        self.send_data2([0x00] * buf_size)  # no black ink = white
+        for i in range(buf_size):
+            self.send_data(0x00)
         epdconfig.delay_ms(2)
 
         self.send_command(DATA_START_TRANSMISSION_2)
         epdconfig.delay_ms(2)
-        self.send_data2([0x00] * buf_size)  # no red ink
+        for i in range(buf_size):
+            self.send_data(0x00)
         epdconfig.delay_ms(2)
 
         self.send_command(DISPLAY_REFRESH)
