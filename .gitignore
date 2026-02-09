@@ -5,4 +5,5 @@ __pycache__/
 dist/
 build/
 demo_output/
+*.key
 CLAUDE.md

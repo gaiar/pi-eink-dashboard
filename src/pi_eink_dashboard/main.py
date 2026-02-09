@@ -30,6 +30,8 @@ def main() -> None:
         socket.gethostname = lambda: "inkberry"
 
     from .composer import Composer
+    from .photos import PhotoCache
+    from .screens.photo import PhotoScreen
 
     if demo_mode:
         log.info("Demo mode — rendering to PNG files.")
@@ -46,12 +48,12 @@ def main() -> None:
         print("pi-eink-dashboard: EPD ready.", flush=True)
 
     from .input import InputHandler
+    from .screens.art import ArtScreen
     from .screens.dashboard import DashboardScreen
+    from .screens.health import HealthScreen
     from .screens.identity import IdentityScreen
     from .screens.network import NetworkScreen
-    from .screens.health import HealthScreen
     from .screens.test_pattern import TestPatternScreen
-    from .screens.art import ArtScreen
 
     inp = InputHandler()
     screens = [
@@ -64,8 +66,12 @@ def main() -> None:
     ]
     total = len(screens)
 
+    photo_cache = PhotoCache()
+    photo_screen = PhotoScreen(photo_cache)
+
     screen_idx = 0
-    auto_cycle = False
+    saved_screen_idx = 0
+    slideshow_mode = False
     running = True
 
     def shutdown(_signum: int, _frame: object) -> None:
@@ -78,12 +84,17 @@ def main() -> None:
     def render_current() -> None:
         """Render current screen and send to display (or save PNG in demo mode)."""
         composer = Composer()
-        screen = screens[screen_idx]
-        title = screen.title or "fullbleed"
-        print(
-            f"pi-eink-dashboard: rendering screen {screen_idx + 1}/{total}: {title}",
-            flush=True,
-        )
+
+        if slideshow_mode:
+            screen = photo_screen
+            title = "photo"
+            label = f"photo {photo_cache.index + 1}/{photo_cache.count}"
+        else:
+            screen = screens[screen_idx]
+            title = screen.title or "fullbleed"
+            label = f"screen {screen_idx + 1}/{total}: {title}"
+
+        print(f"pi-eink-dashboard: rendering {label}", flush=True)
         screen.render(screen_idx, total, composer)
         black_img, red_img = composer.result()
 
@@ -92,10 +103,22 @@ def main() -> None:
             display.show(black_img, red_img)
             print("pi-eink-dashboard: display updated.", flush=True)
         else:
-            _save_demo(screen_idx, screen, black_img, red_img)
+            _save_demo(screen_idx, screen, title, black_img, red_img)
+
+    def show_loading() -> None:
+        """Render loading screen immediately to display (or save PNG in demo)."""
+        composer = Composer()
+        photo_screen.draw_loading(composer)
+        black_img, red_img = composer.result()
+
+        if display is not None:
+            print("pi-eink-dashboard: showing loading screen...", flush=True)
+            display.show(black_img, red_img)
+        else:
+            _save_demo(total, photo_screen, "loading", black_img, red_img)
 
     def _save_demo(
-        idx: int, screen: object, black_img: object, red_img: object
+        idx: int, screen: object, title: str, black_img: object, red_img: object
     ) -> None:
         """Save rendered images as PNGs for headless development."""
         import os
@@ -103,7 +126,6 @@ def main() -> None:
         from PIL import Image
 
         os.makedirs(DEMO_SAVE_DIR, exist_ok=True)
-        title = getattr(screen, "title", "") or "fullbleed"
         name = title.lower().replace(" ", "_")
 
         # Save individual layers
@@ -125,13 +147,29 @@ def main() -> None:
 
     try:
         if demo_mode:
-            # Demo: render all screens once and exit
+            # Demo: render all screens once
             for i in range(total):
                 screen_idx = i
                 render_current()
-            log.info(
-                "Demo complete — %d screens rendered to %s/", total, DEMO_SAVE_DIR
-            )
+
+            # Demo: show loading screen, fetch photos, render first one
+            show_loading()
+            print("pi-eink-dashboard: fetching photos for demo...", flush=True)
+            try:
+                photo_cache.refresh()
+                if photo_cache.count > 0:
+                    slideshow_mode = True
+                    composer = Composer()
+                    photo_screen.render(0, 1, composer)
+                    black_img, red_img = composer.result()
+                    _save_demo(total, photo_screen, "photo", black_img, red_img)
+                    log.info("Demo: rendered APOD photo.")
+                else:
+                    log.info("Demo: no APOD photos available.")
+            except Exception:
+                log.warning("Demo: failed to fetch APOD photos.", exc_info=True)
+
+            log.info("Demo complete — screens rendered to %s/", DEMO_SAVE_DIR)
             return
 
         # === MAIN LOOP ===
@@ -145,29 +183,65 @@ def main() -> None:
                 elapsed = time.monotonic() - poll_start
                 if elapsed >= REFRESH_INTERVAL:
                     # Auto-refresh timeout
-                    if auto_cycle:
-                        screen_idx = (screen_idx + 1) % total
+                    if slideshow_mode:
+                        photo_screen.advance()
                     break
 
                 event = inp.poll()
-                if event == "KEY1":
-                    # Previous screen
-                    screen_idx = (screen_idx - 1) % total
-                    break
-                elif event == "KEY2":
-                    # Next screen
-                    screen_idx = (screen_idx + 1) % total
-                    break
-                elif event == "KEY3":
-                    # Force refresh current screen
-                    break
-                elif event == "KEY4":
-                    # Toggle auto-cycle
-                    auto_cycle = not auto_cycle
-                    log.info("Auto-cycle: %s", "ON" if auto_cycle else "OFF")
-                    # Don't break — just toggle, keep polling
+                if event is None:
+                    time.sleep(POLL_SLEEP)
+                    continue
 
-                time.sleep(POLL_SLEEP)
+                if slideshow_mode:
+                    # Slideshow key handling
+                    if event == "KEY1":
+                        photo_screen.retreat()
+                        break
+                    elif event == "KEY2":
+                        photo_screen.advance()
+                        break
+                    elif event == "KEY3":
+                        # Re-fetch photos: first one blocks, rest in background
+                        show_loading()
+                        log.info("Slideshow: refreshing photos...")
+                        try:
+                            photo_cache.refresh_first()
+                            photo_cache.start_background_refresh()
+                        except Exception:
+                            log.warning("Failed to refresh photos.", exc_info=True)
+                        break
+                    elif event == "KEY4":
+                        # Exit slideshow
+                        slideshow_mode = False
+                        screen_idx = saved_screen_idx
+                        log.info(
+                            "Slideshow OFF — returning to screen %d.", screen_idx + 1
+                        )
+                        break
+                else:
+                    # Normal dashboard key handling
+                    if event == "KEY1":
+                        screen_idx = (screen_idx - 1) % total
+                        break
+                    elif event == "KEY2":
+                        screen_idx = (screen_idx + 1) % total
+                        break
+                    elif event == "KEY3":
+                        break
+                    elif event == "KEY4":
+                        # Enter slideshow
+                        saved_screen_idx = screen_idx
+                        slideshow_mode = True
+                        log.info("Slideshow ON.")
+                        if photo_cache.count == 0:
+                            show_loading()
+                            log.info("Photo cache empty — fetching photos...")
+                            try:
+                                photo_cache.refresh_first()
+                                photo_cache.start_background_refresh()
+                            except Exception:
+                                log.warning("Failed to fetch photos.", exc_info=True)
+                        break
 
     finally:
         if display is not None:

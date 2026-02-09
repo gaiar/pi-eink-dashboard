@@ -95,6 +95,7 @@ info "Step 3/5 — Installing system packages..."
 PACKAGES=(
     python3-pil
     python3-psutil
+    python3-numpy
     python3-venv
     python3-spidev
     python3-gpiozero
