@@ -23,9 +23,9 @@ FONT_HERO = _load_font(40, bold=True)
 FONT_LARGE = _load_font(24, bold=True)
 FONT_TITLE = _load_font(18, bold=True)
 FONT_SECTION = _load_font(14, bold=True)
-FONT_BODY = _load_font(13)
-FONT_LABEL = _load_font(11, bold=True)
-FONT_SMALL = _load_font(10)
+FONT_BODY = _load_font(14)
+FONT_LABEL = _load_font(13, bold=True)
+FONT_SMALL = _load_font(12, bold=True)
 
 # Layout constants
 HEADER_HEIGHT = 22

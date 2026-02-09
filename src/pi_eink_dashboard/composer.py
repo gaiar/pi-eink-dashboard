@@ -22,8 +22,9 @@ class Composer:
     """
 
     def __init__(self) -> None:
-        self._black = Image.new("1", (WIDTH, HEIGHT), NO_INK)
-        self._red = Image.new("1", (WIDTH, HEIGHT), NO_INK)
+        # Draw on grayscale ("L") for clean font rendering, convert to "1" in result()
+        self._black = Image.new("L", (WIDTH, HEIGHT), NO_INK)
+        self._red = Image.new("L", (WIDTH, HEIGHT), NO_INK)
         self._draw_black = ImageDraw.Draw(self._black)
         self._draw_red = ImageDraw.Draw(self._red)
 
@@ -33,8 +34,11 @@ class Composer:
         return self._draw_black
 
     def result(self) -> tuple[Image.Image, Image.Image]:
-        """Return (black_image, red_image) for display."""
-        return self._black, self._red
+        """Return (black_image, red_image) as 1-bit images for display."""
+        return (
+            self._black.convert("1", dither=Image.Dither.NONE),
+            self._red.convert("1", dither=Image.Dither.NONE),
+        )
 
     def text(
         self,
